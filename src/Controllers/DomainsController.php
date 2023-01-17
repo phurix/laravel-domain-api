@@ -2,7 +2,7 @@
 
 namespace Deaduseful\DomainApi\Controllers;
 
-use Deaduseful\Services\DomainService;
+use Deaduseful\DomainApi\Services\DomainService;
 use DomainException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
