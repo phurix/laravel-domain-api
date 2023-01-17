@@ -2,8 +2,8 @@
 
 return [
     'live' => [
-        'username' => env('OSRS_LIVE_USERNAME'),
-        'key' => env('OSRS_LIVE_KEY'),
+        'username' => env('OSRS_USERNAME'),
+        'key' => env('OSRS_KEY'),
     ],
     'test' => [
         'username' => env('OSRS_TEST_USERNAME'),
