@@ -19,7 +19,7 @@
     },
     "autoload": {
         "psr-4": {
-            "Deaduseful\\": "src"
+            "Deaduseful\\DomainApi\\": "src"
         }
     },
     "autoload-dev": {

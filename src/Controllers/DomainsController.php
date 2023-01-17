@@ -1,6 +1,6 @@
 <?php
 
-namespace Deaduseful\Controllers;
+namespace Deaduseful\DomainApi\Controllers;
 
 use Deaduseful\Services\DomainService;
 use DomainException;

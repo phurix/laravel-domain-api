@@ -1,6 +1,6 @@
 <?php
 
-namespace Deaduseful\Services;
+namespace Deaduseful\DomainApi\Services;
 
 use Deaduseful\Opensrs\FastLookup;
 use Deaduseful\Opensrs\Lookup;
