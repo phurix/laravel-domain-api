@@ -7,7 +7,7 @@
     "require": {
         "php": ">=7.4",
         "ext-json": "*",
-        "deaduseful/opensrs-lookup": "^0.5.1",
+        "deaduseful/opensrs-lookup": "dev-master",
         "deaduseful/whois-lookup": "dev-master",
         "laravel/framework": "^8.0"
     },
