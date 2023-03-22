@@ -1,17 +1,22 @@
 <?php
 
 return [
-    'live' => [
-        'username' => env('OSRS_USERNAME'),
-        'key' => env('OSRS_KEY'),
+    'api' => [
+        'token' => env('API_TOKEN'),
     ],
-    'test' => [
-        'username' => env('OSRS_TEST_USERNAME'),
-        'key' => env('OSRS_TEST_KEY'),
+    'opensrs' => [
+        'live' => [
+            'username' => env('OSRS_USERNAME'),
+            'key' => env('OSRS_KEY'),
+        ],
+        'test' => [
+            'username' => env('OSRS_TEST_USERNAME'),
+            'key' => env('OSRS_TEST_KEY'),
+        ],
     ],
     'routes' => [
         'prefix' => 'domain-api',
-        'middleware' => ['auth'],
+        'middleware' => ['auth:api'],
         'name' => 'domain-api.',
     ],
 ];

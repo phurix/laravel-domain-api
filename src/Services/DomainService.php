@@ -2,39 +2,48 @@
 
 namespace Deaduseful\DomainApi\Services;
 
+use Deaduseful\DomainApi\ServiceProvider;
 use Deaduseful\Opensrs\FastLookup;
 use Deaduseful\Opensrs\Lookup;
 use Deaduseful\Whois\Lookup as WhoisLookup;
 use DomainException;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Config;
 use UnexpectedValueException;
 
 class DomainService
 {
-    const CACHE_TTL = 5 * 60; // 5 minutes
+    private const CACHE_TTL = 5 * 60; // 5 minutes
+    public const TLDS = ['com', 'co.uk', 'eu', 'co', 'biz', 'cc', 'club', 'info', 'name', 'net', 'org', 'tv', 'uk', 'org.uk', 'me.uk', 'us', 'ws'];
+    public const SUGGEST_SERVICES = ['lookup', 'suggestion', 'premium', 'personal_names'];
+    
+    private string $query;
 
-    /** @const array Tlds */
-    const TLDS = ['com', 'co.uk', 'eu', 'co', 'biz', 'cc', 'club', 'info', 'name', 'net', 'org', 'tv', 'uk', 'org.uk', 'me.uk', 'us', 'ws'];
-    const SUGGEST_SERVICES = ['lookup', 'suggestion', 'premium', 'personal_names'];
-
-    public static function availability(string $query): array
+    public function availability(): array
     {
         $key = __CLASS__ . PATH_SEPARATOR . __FUNCTION__ . PATH_SEPARATOR . serialize(func_get_args());
-        $result = self::checkCacheResult($key);
+        $result = $this->checkCacheResult($key);
         if ($result) {
             return $result;
         }
         $lookup = new FastLookup();
-        $result = $lookup->lookup($query);
+        $result = $lookup->lookup($this->query);
         $successKeys = array_keys(FastLookup::SUCCESS_RESPONSE_CODES);
         if (in_array($result['code'], $successKeys) === false) {
             throw new UnexpectedValueException($result['response'], $result['code']);
         }
-        self::saveCacheResult($result, $key);
+        $this->saveCacheResult($result, $key);
         return $result;
     }
 
-    private static function checkCacheResult(string $key)
+    private function validateQuery(string $query): void
+    {
+        if (filter_var($query, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME) === false) {
+            throw new DomainException('Invalid Domain Name');
+        }
+    }
+
+    private function checkCacheResult(string $key)
     {
         if (Cache::has($key)) {
             return Cache::get($key);
@@ -42,25 +51,26 @@ class DomainService
         return null;
     }
 
-    private static function saveCacheResult($result, string $key): void
+    private function saveCacheResult($result, string $key): void
     {
         if (empty($result) === false) {
             Cache::put($key, $result, self::CACHE_TTL);
         }
     }
 
-    public static function whois(string $query, string $server = null): array
+    public function whois(string $server = null): array
     {
         $key = __CLASS__ . PATH_SEPARATOR . __FUNCTION__ . PATH_SEPARATOR . serialize(func_get_args());
-        $result = self::checkCacheResult($key);
+        $result = $this->checkCacheResult($key);
         if ($result) {
             return $result;
         }
+        $query = $this->query;
         $result = [];
         $result['tld'] = pathinfo($query, PATHINFO_EXTENSION);
         if ($server === null) {
-            $serverResult = self::getWhoisServer($result['tld']);
-            $server = self::parseWhoisServer($serverResult);
+            $serverResult = $this->getWhoisServer($result['tld']);
+            $server = $this->parseWhoisServer($serverResult);
         }
         if (empty($server)) {
             throw new DomainException('Unable to find whois server for ' . $result['tld']);
@@ -75,24 +85,24 @@ class DomainService
         $query = $lookup->query($query);
         $query = mb_convert_encoding($query, 'UTF-8', 'UTF-8');
         $result['result'] = $query;
-        self::saveCacheResult($result, $key);
+        $this->saveCacheResult($result, $key);
         return $result;
     }
 
-    private static function getWhoisServer(string $query): string
+    private function getWhoisServer(string $query): string
     {
         $key = __CLASS__ . PATH_SEPARATOR . __FUNCTION__ . PATH_SEPARATOR . serialize(func_get_args());
-        $result = self::checkCacheResult($key);
+        $result = $this->checkCacheResult($key);
         if ($result) {
             return $result;
         }
         $lookup = new WhoisLookup($query);
         $result = $lookup->query($query);
-        self::saveCacheResult($result, $key);
+        $this->saveCacheResult($result, $key);
         return $result;
     }
 
-    private static function parseWhoisServer(string $result): string
+    private function parseWhoisServer(string $result): string
     {
         $server = '';
         $lines = explode(PHP_EOL, $result);
@@ -108,49 +118,61 @@ class DomainService
         return $server;
     }
 
-    public static function transferable(string $query, bool $test = false): array
+    public function transferable(bool $test = false): array
     {
         $key = __CLASS__ . PATH_SEPARATOR . __FUNCTION__ . PATH_SEPARATOR . serialize(func_get_args());
-        $result = self::checkCacheResult($key);
+        $result = $this->checkCacheResult($key);
         if ($result) {
             return $result;
         }
-        $lookup = self::getLookup($test);
-        $result = $lookup->lookup($query, 'check_transfer');
-        self::saveCacheResult($result, $key);
+        $lookup = $this->getLookup($test);
+        $result = $lookup->lookup($this->query, 'check_transfer');
+        $this->saveCacheResult($result, $key);
         return $result;
     }
 
-    public static function suggest(string $query, array $tlds = self::TLDS, array $services = self::SUGGEST_SERVICES, bool $test = false): array
+    private function getLookup(bool $test): Lookup
     {
-        $tlds = empty($tlds) ? self::TLDS : $tlds;
-        $services = empty($services) ? self::SUGGEST_SERVICES : $services;
-        $key = __CLASS__ . PATH_SEPARATOR . __FUNCTION__ . PATH_SEPARATOR . serialize(func_get_args());
-        $result = self::checkCacheResult($key);
-        if ($result) {
-            return $result;
-        }
-        $lookup = self::getLookup($test);
-        $results = $lookup->suggest($query, $tlds, $services);
-        $attributes = $results['attributes'];
-        self::saveCacheResult($attributes, $key);
-        return $attributes;
-
-    }
-
-    private static function getLookup(bool $test): Lookup
-    {
-        $opensrsConfig = config('opensrs');
+        $opensrsConfig = Config::get(ServiceProvider::NAMESPACE . '.opensrs');
         if (!$opensrsConfig) {
             throw new DomainException('Missing Config');
         }
         $mode = $test ? 'test' : 'live';
         $config = $opensrsConfig[$mode];
-        if (!$config) {
-            throw new DomainException('Missing Config');
+        if (empty($config)) {
+            throw new DomainException(sprintf('Missing "%s" Config', $mode));
         }
         $configUsername = $config['username'];
+        if (empty($configUsername)) {
+            throw new DomainException(sprintf('Missing "%s" Config Username', $mode));
+        }
         $configKey = $config['key'];
+        if (empty($configKey)) {
+            throw new DomainException(sprintf('Missing "%s" Config Key', $mode));
+        }
         return new Lookup($configUsername, $configKey, $test);
+    }
+
+    public function suggest(array $tlds = self::TLDS, array $services = self::SUGGEST_SERVICES, bool $test = false): array
+    {
+        $tlds = empty($tlds) ? self::TLDS : $tlds;
+        $services = empty($services) ? self::SUGGEST_SERVICES : $services;
+        $key = __CLASS__ . PATH_SEPARATOR . __FUNCTION__ . PATH_SEPARATOR . serialize(func_get_args());
+        $result = $this->checkCacheResult($key);
+        if ($result) {
+            return $result;
+        }
+        $lookup = $this->getLookup($test);
+        $results = $lookup->suggest($this->query, $tlds, $services);
+        $attributes = $results['attributes'];
+        $this->saveCacheResult($attributes, $key);
+        return $attributes;
+    }
+
+    public function setQuery(string $query): DomainService
+    {
+        $this->validateQuery($query);
+        $this->query = $query;
+        return $this;
     }
 }
