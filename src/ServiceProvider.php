@@ -2,38 +2,45 @@
 
 namespace Deaduseful\DomainApi;
 
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider as BaseProvider;
 
 class ServiceProvider extends BaseProvider
 {
-    public const CONFIG_KEY = 'domainapi';
+    public const NAMESPACE = 'domainapi';
 
     /** @var string */
     public const CONFIG_PATH = __DIR__ . '/config.php';
 
     public function register()
     {
-        $this->mergeConfigFrom(self::CONFIG_PATH, self::CONFIG_KEY);
+        $this->mergeConfigFrom(self::CONFIG_PATH, self::NAMESPACE);
     }
 
     public function boot()
     {
         $this->getPublishes();
-        $this->handleRoutes();
+        $this->mapRoutes();
     }
 
     private function getPublishes(): void
     {
         $this->publishes([
-            self::CONFIG_PATH => config_path(self::CONFIG_KEY . '.php'),
+            self::CONFIG_PATH => config_path(self::NAMESPACE . '.php'),
         ], 'config');
     }
 
-    protected function handleRoutes()
+    protected function mapRoutes()
     {
-        Route::macro(self::CONFIG_KEY . 'Routes', function () {
-            $this->loadRoutesFrom(__DIR__ . '/../routes.php');
-        });
+        $config = Config::get(self::NAMESPACE . '.routes');
+        $prefix = $config['prefix'];
+        $name = $config['name'];
+        $middleware = $config['middleware'];
+        Route::prefix($prefix)
+            ->name($name)
+            ->middleware($middleware)
+            ->namespace(__NAMESPACE__)
+            ->group(__DIR__ . DIRECTORY_SEPARATOR . 'routes.php');
     }
 }

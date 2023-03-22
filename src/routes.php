@@ -2,7 +2,9 @@
 
 use Illuminate\Support\Facades\Route;
 
-Route::group(['prefix' => 'domain-api/{query}', 'middleware' => 'auth', 'namespace' => 'Deaduseful\DomainsApi\Controllers'], function () {
+Route::group([
+    'prefix' => '{query}',
+], function () {
     Route::get('available', 'DomainsController@availability');
     Route::get('transferable', 'DomainsController@transferable');
     Route::get('whois', 'DomainsController@whois');

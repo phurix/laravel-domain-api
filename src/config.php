@@ -9,4 +9,9 @@ return [
         'username' => env('OSRS_TEST_USERNAME'),
         'key' => env('OSRS_TEST_KEY'),
     ],
+    'routes' => [
+        'prefix' => 'domain-api',
+        'middleware' => ['auth'],
+        'name' => 'domain-api.',
+    ],
 ];
