@@ -21,6 +21,7 @@ class DomainService
 
     public function availability(): array
     {
+        $this->validateDomain($this->query);
         $key = __CLASS__ . PATH_SEPARATOR . __FUNCTION__ . PATH_SEPARATOR . serialize(func_get_args());
         $result = $this->checkCacheResult($key);
         if ($result) {
@@ -36,7 +37,7 @@ class DomainService
         return $result;
     }
 
-    private function validateQuery(string $query): void
+    private function validateDomain(string $query): void
     {
         if (filter_var($query, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME) === false) {
             throw new DomainException('Invalid Domain Name');
@@ -60,6 +61,7 @@ class DomainService
 
     public function whois(string $server = null): array
     {
+        $this->validateDomain($this->query);
         $key = __CLASS__ . PATH_SEPARATOR . __FUNCTION__ . PATH_SEPARATOR . serialize(func_get_args());
         $result = $this->checkCacheResult($key);
         if ($result) {
@@ -120,6 +122,7 @@ class DomainService
 
     public function transferable(bool $test = false): array
     {
+        $this->validateDomain($this->query);
         $key = __CLASS__ . PATH_SEPARATOR . __FUNCTION__ . PATH_SEPARATOR . serialize(func_get_args());
         $result = $this->checkCacheResult($key);
         if ($result) {
@@ -171,7 +174,6 @@ class DomainService
 
     public function setQuery(string $query): DomainService
     {
-        $this->validateQuery($query);
         $this->query = $query;
         return $this;
     }
