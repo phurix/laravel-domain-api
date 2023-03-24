@@ -16,7 +16,7 @@ return [
     ],
     'routes' => [
         'prefix' => 'domain-api',
-        'middleware' => ['auth:api'],
+        'middleware' => ['api_token'],
         'name' => 'domain-api.',
     ],
 ];

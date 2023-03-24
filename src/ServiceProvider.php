@@ -2,6 +2,7 @@
 
 namespace Deaduseful\DomainApi;
 
+use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider as BaseProvider;
@@ -22,6 +23,7 @@ class ServiceProvider extends BaseProvider
     {
         $this->getPublishes();
         $this->mapRoutes();
+        $this->addMiddleware();
     }
 
     private function getPublishes(): void
@@ -42,5 +44,15 @@ class ServiceProvider extends BaseProvider
             ->middleware($middleware)
             ->namespace(__NAMESPACE__)
             ->group(__DIR__ . DIRECTORY_SEPARATOR . 'routes.php');
+    }
+
+    /**
+     * @return void
+     * @throws \Illuminate\Contracts\Container\BindingResolutionException
+     */
+    private function addMiddleware(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->aliasMiddleware('api_token', ApiToken::class);
     }
 }
