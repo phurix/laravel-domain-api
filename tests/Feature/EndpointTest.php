@@ -10,7 +10,10 @@ class EndpointTest extends TestCase
 {
     public function testAvailable()
     {
-        $route = 'domain-api/example.com/available';
+        $query = 'example.com';
+        $method = 'available';
+        //$route = route('domain-api.' . $method, $query);
+        $route = sprintf('domain-api/%s/%s', $query, $method);
         $content = $this->withoutMiddleware()->getJson($route)->assertOk()->getContent();
         $response = json_decode($content, true);
         $this->assertIsString($response['response']);
@@ -36,5 +39,13 @@ class EndpointTest extends TestCase
         $this->assertIsString($response['tld']);
         $this->assertIsString($response['server']);
         $this->assertIsString($response['result']);
+    }
+
+    public function testSuggest()
+    {
+        $route = 'domain-api/example/suggest';
+        $content = $this->withoutMiddleware()->getJson($route)->assertOk()->getContent();
+        $response = json_decode($content, true);
+        $this->assertIsArray($response);
     }
 }
