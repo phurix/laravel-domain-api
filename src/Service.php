@@ -16,9 +16,27 @@ class Service
     private const CACHE_TTL = 5 * 60; // 5 minutes
     public const TLDS = ['com', 'co.uk', 'eu', 'co', 'biz', 'cc', 'club', 'info', 'name', 'net', 'org', 'tv', 'uk', 'org.uk', 'me.uk', 'us', 'ws'];
     public const SUGGEST_SERVICES = ['lookup', 'suggestion', 'premium', 'personal_names'];
+
+    public const STATUS_AVAILABLE = 'available';
+    public const STATUS_TAKEN = 'taken';
     
     private string $query;
     private bool $test = false;
+
+    public function isAvailable(): ?bool
+    {
+        $result = $this->availability();
+        if (empty($result['status'])) {
+            throw new \RuntimeException($result['response'], $result['code']);
+        }
+        $status = $result['status'];
+        if ($status === self::STATUS_AVAILABLE) {
+            return true;
+        } elseif ($status === self::STATUS_TAKEN) {
+            return false;
+        }
+        return null;
+    }
 
     public function availability(): array
     {
@@ -177,5 +195,14 @@ class Service
     {
         $this->query = $query;
         return $this;
+    }
+
+    public function canTransfer(): bool
+    {
+        $result = $this->transferable();
+        if (empty($result['attributes'])) {
+            throw new \RuntimeException($result['response'], $result['code']);
+        }
+        return $result['attributes']['transferrable'] === 1;
     }
 }

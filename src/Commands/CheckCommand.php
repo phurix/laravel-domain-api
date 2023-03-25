@@ -16,9 +16,9 @@ class CheckCommand extends Command
         $domain = $this->argument('domain');
         $service = new Service();
         $service->setQuery($domain);
-        if ($service->availability()) {
+        if ($service->isAvailable()) {
             $this->info(sprintf('Domain %s is available for registration.', $domain));
-        } elseif ($service->transferable()) {
+        } elseif ($service->canTransfer()) {
             $this->warn(sprintf('Domain %s is available for transfer.', $domain));
         } else {
             $this->error(sprintf('Domain %s is not available.', $domain));
