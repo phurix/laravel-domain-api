@@ -2,7 +2,6 @@
 
 namespace Deaduseful\DomainApi;
 
-use Deaduseful\DomainApi\Services\DomainService;
 use DomainException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -14,7 +13,7 @@ class DomainsController extends Controller
 {
     public function availability(string $query): JsonResponse
     {
-        $service = new DomainService();
+        $service = new Service();
         $result = $service
             ->setQuery($query)
             ->availability();
@@ -24,7 +23,7 @@ class DomainsController extends Controller
     public function transferable(Request $request, string $query): JsonResponse
     {
         $test = $request->get('test', false);
-        $service = new DomainService();
+        $service = new Service();
         $result = $service
             ->setQuery($query)
             ->transferable($test);
@@ -34,7 +33,7 @@ class DomainsController extends Controller
     public function whois(string $query, ?string $server = null): JsonResponse
     {
         try {
-            $service = new DomainService();
+            $service = new Service();
             $result = $service
                 ->setQuery($query)
                 ->whois($server);
@@ -48,9 +47,9 @@ class DomainsController extends Controller
     public function suggest(Request $request, string $query): JsonResponse
     {
         $test = $request->get('test', false);
-        $tlds = $request->has('tlds') ? explode(',', $request->get('tlds')) : DomainService::TLDS;
-        $services = $request->has('services') ? explode(',', $request->get('services')) : DomainService::SUGGEST_SERVICES;
-        $service = new DomainService();
+        $tlds = $request->has('tlds') ? explode(',', $request->get('tlds')) : Service::TLDS;
+        $services = $request->has('services') ? explode(',', $request->get('services')) : Service::SUGGEST_SERVICES;
+        $service = new Service();
         $result = $service
             ->setQuery($query)
             ->suggest($tlds, $services, $test);

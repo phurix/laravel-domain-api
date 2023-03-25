@@ -1,8 +1,7 @@
 <?php
 
-namespace Deaduseful\DomainApi\Services;
+namespace Deaduseful\DomainApi;
 
-use Deaduseful\DomainApi\ServiceProvider;
 use Deaduseful\Opensrs\FastLookup;
 use Deaduseful\Opensrs\Lookup;
 use Deaduseful\Whois\Lookup as WhoisLookup;
@@ -10,14 +9,16 @@ use DomainException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
 use UnexpectedValueException;
+use function mb_convert_encoding;
 
-class DomainService
+class Service
 {
     private const CACHE_TTL = 5 * 60; // 5 minutes
     public const TLDS = ['com', 'co.uk', 'eu', 'co', 'biz', 'cc', 'club', 'info', 'name', 'net', 'org', 'tv', 'uk', 'org.uk', 'me.uk', 'us', 'ws'];
     public const SUGGEST_SERVICES = ['lookup', 'suggestion', 'premium', 'personal_names'];
     
     private string $query;
+    private bool $test = false;
 
     public function availability(): array
     {
@@ -120,7 +121,7 @@ class DomainService
         return $server;
     }
 
-    public function transferable(bool $test = false): array
+    public function transferable(): array
     {
         $this->validateDomain($this->query);
         $key = __CLASS__ . PATH_SEPARATOR . __FUNCTION__ . PATH_SEPARATOR . serialize(func_get_args());
@@ -128,19 +129,19 @@ class DomainService
         if ($result) {
             return $result;
         }
-        $lookup = $this->getLookup($test);
+        $lookup = $this->getLookup();
         $result = $lookup->lookup($this->query, 'check_transfer');
         $this->saveCacheResult($result, $key);
         return $result;
     }
 
-    private function getLookup(bool $test): Lookup
+    private function getLookup(): Lookup
     {
         $opensrsConfig = Config::get(ServiceProvider::NAMESPACE . '.opensrs');
         if (!$opensrsConfig) {
             throw new DomainException('Missing Config');
         }
-        $mode = $test ? 'test' : 'live';
+        $mode = $this->test ? 'test' : 'live';
         $config = $opensrsConfig[$mode];
         if (empty($config)) {
             throw new DomainException(sprintf('Missing "%s" Config', $mode));
@@ -153,10 +154,10 @@ class DomainService
         if (empty($configKey)) {
             throw new DomainException(sprintf('Missing "%s" Config Key', $mode));
         }
-        return new Lookup($configUsername, $configKey, $test);
+        return new Lookup($configUsername, $configKey, $this->test);
     }
 
-    public function suggest(array $tlds = self::TLDS, array $services = self::SUGGEST_SERVICES, bool $test = false): array
+    public function suggest(array $tlds = self::TLDS, array $services = self::SUGGEST_SERVICES): array
     {
         $tlds = empty($tlds) ? self::TLDS : $tlds;
         $services = empty($services) ? self::SUGGEST_SERVICES : $services;
@@ -165,14 +166,14 @@ class DomainService
         if ($result) {
             return $result;
         }
-        $lookup = $this->getLookup($test);
+        $lookup = $this->getLookup();
         $results = $lookup->suggest($this->query, $tlds, $services);
         $attributes = $results['attributes'];
         $this->saveCacheResult($attributes, $key);
         return $attributes;
     }
 
-    public function setQuery(string $query): DomainService
+    public function setQuery(string $query): Service
     {
         $this->query = $query;
         return $this;
