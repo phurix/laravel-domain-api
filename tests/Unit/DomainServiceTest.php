@@ -2,7 +2,7 @@
 
 namespace Deaduseful\DomainApi\Tests\Unit;
 
-use Deaduseful\DomainApi\Services\DomainService;
+use Deaduseful\DomainApi\Service;
 use Deaduseful\DomainApi\Tests\TestCase;
 
 class DomainServiceTest extends TestCase
@@ -10,7 +10,7 @@ class DomainServiceTest extends TestCase
     public function testAvailable()
     {
         $query = 'example.com';
-        $service = new DomainService();
+        $service = new Service();
         $result = $service
             ->setQuery($query)
             ->availability();
@@ -22,7 +22,7 @@ class DomainServiceTest extends TestCase
     public function testTransferable()
     {
         $query = 'example.com';
-        $service = new DomainService();
+        $service = new Service();
         $result = $service
             ->setQuery($query)
             ->transferable();
@@ -34,7 +34,7 @@ class DomainServiceTest extends TestCase
     public function testWhois()
     {
         $query = 'example.com';
-        $service = new DomainService();
+        $service = new Service();
         $result = $service
             ->setQuery($query)
             ->whois();
@@ -44,7 +44,7 @@ class DomainServiceTest extends TestCase
     public function testTransferableInt()
     {
         $query = 'example.int';
-        $service = new DomainService();
+        $service = new Service();
         $result = $service
             ->setQuery($query)
             ->transferable();
