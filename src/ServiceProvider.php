@@ -2,6 +2,9 @@
 
 namespace Deaduseful\DomainApi;
 
+use Deaduseful\DomainApi\Commands\CheckCommand;
+use Deaduseful\DomainApi\Commands\SuggestCommand;
+use Deaduseful\DomainApi\Commands\WhoisCommand;
 use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Route;
@@ -13,6 +16,11 @@ class ServiceProvider extends BaseProvider
 
     /** @var string */
     public const CONFIG_PATH = __DIR__ . '/config.php';
+    private const COMMANDS = [
+        CheckCommand::class,
+        WhoisCommand::class,
+        SuggestCommand::class,
+    ];
 
     public function register()
     {
@@ -21,9 +29,13 @@ class ServiceProvider extends BaseProvider
 
     public function boot()
     {
-        $this->getPublishes();
-        $this->mapRoutes();
-        $this->addMiddleware();
+        if ($this->app->runningInConsole()) {
+            $this->getPublishes();
+            $this->getCommands();
+        } else {
+            $this->mapRoutes();
+            $this->addMiddleware();
+        }
     }
 
     private function getPublishes(): void
@@ -54,5 +66,10 @@ class ServiceProvider extends BaseProvider
     {
         $router = $this->app->make(Router::class);
         $router->aliasMiddleware('api_token', ApiToken::class);
+    }
+
+    private function getCommands(): void
+    {
+        $this->commands(self::COMMANDS);
     }
 }

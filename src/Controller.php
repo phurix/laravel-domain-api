@@ -5,11 +5,11 @@ namespace Deaduseful\DomainApi;
 use DomainException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Routing\Controller;
+use Illuminate\Routing\Controller as BaseController;
 use Symfony\Component\HttpFoundation\Response;
 use UnexpectedValueException;
 
-class DomainsController extends Controller
+class Controller extends BaseController
 {
     public function availability(string $query): JsonResponse
     {
