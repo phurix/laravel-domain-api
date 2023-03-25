@@ -2,7 +2,8 @@
 
 return [
     'api' => [
-        'token' => env('API_TOKEN'),
+        'token' => env('DOMAIN_API_TOKEN'),
+        'test' => env('DOMAIN_API_TEST'),
     ],
     'opensrs' => [
         'live' => [
@@ -15,8 +16,8 @@ return [
         ],
     ],
     'routes' => [
-        'prefix' => 'domain-api',
-        'middleware' => ['api_token'],
-        'name' => 'domain-api.',
+        'prefix' => env('DOMAIN_API_PREFIX', 'domain-api'),
+        'middleware' => [env('DOMAIN_API_MIDDLEWARE', 'api_token')],
+        'name' => env('DOMAIN_API_NAME', 'domain-api.'),
     ],
 ];
