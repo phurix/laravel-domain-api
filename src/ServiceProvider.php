@@ -29,13 +29,13 @@ class ServiceProvider extends BaseProvider
 
     public function boot()
     {
-        $this->mapRoutes();
         if ($this->app->runningInConsole()) {
             $this->getPublishes();
             $this->getCommands();
         } else {
             $this->addMiddleware();
         }
+        $this->mapRoutes();
     }
 
     private function getPublishes(): void
