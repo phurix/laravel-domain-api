@@ -19,7 +19,7 @@ class Service
 
     public const STATUS_AVAILABLE = 'available';
     public const STATUS_TAKEN = 'taken';
-    
+
     private string $query;
     private bool $test = false;
 
@@ -139,18 +139,22 @@ class Service
         return $server;
     }
 
-    public function transferable(): array
+    public function suggest(array $tlds = self::TLDS, array $services = self::SUGGEST_SERVICES): array
     {
-        $this->validateDomain($this->query);
+        $tlds = empty($tlds) ? self::TLDS : $tlds;
+        $services = empty($services) ? self::SUGGEST_SERVICES : $services;
         $key = __CLASS__ . PATH_SEPARATOR . __FUNCTION__ . PATH_SEPARATOR . serialize(func_get_args());
         $result = $this->checkCacheResult($key);
         if ($result) {
             return $result;
         }
         $lookup = $this->getLookup();
-        $result = $lookup->lookup($this->query, 'check_transfer');
-        $this->saveCacheResult($result, $key);
-        return $result;
+        $results = $lookup->suggest($this->query, $tlds, $services);
+        if (empty($results['attributes'])) {
+            throw new \RuntimeException($results['response'], $results['code']);
+        }
+        $this->saveCacheResult($results, $key);
+        return $results['attributes'];
     }
 
     private function getLookup(): Lookup
@@ -175,36 +179,39 @@ class Service
         return new Lookup($configUsername, $configKey, $this->test);
     }
 
-    public function suggest(array $tlds = self::TLDS, array $services = self::SUGGEST_SERVICES): array
-    {
-        $tlds = empty($tlds) ? self::TLDS : $tlds;
-        $services = empty($services) ? self::SUGGEST_SERVICES : $services;
-        $key = __CLASS__ . PATH_SEPARATOR . __FUNCTION__ . PATH_SEPARATOR . serialize(func_get_args());
-        $result = $this->checkCacheResult($key);
-        if ($result) {
-            return $result;
-        }
-        $lookup = $this->getLookup();
-        $results = $lookup->suggest($this->query, $tlds, $services);
-        if (empty($results['attributes'])) {
-            throw new \RuntimeException($results['response'], $results['code']);
-        }
-        $this->saveCacheResult($results, $key);
-        return $results['attributes'];
-    }
-
     public function setQuery(string $query): Service
     {
         $this->query = $query;
         return $this;
     }
 
-    public function canTransfer(): bool
+    public function canTransfer(): ?bool
     {
         $result = $this->transferable();
         if (empty($result['attributes'])) {
             throw new \RuntimeException($result['response'], $result['code']);
         }
-        return $result['attributes']['transferrable'] === 1;
+        $canTransfer = $result['attributes']['transferrable'];
+        if ($canTransfer === 1) {
+            return true;
+        }
+        if ($canTransfer === 0) {
+            return false;
+        }
+        return null;
+    }
+
+    public function transferable(): array
+    {
+        $this->validateDomain($this->query);
+        $key = __CLASS__ . PATH_SEPARATOR . __FUNCTION__ . PATH_SEPARATOR . serialize(func_get_args());
+        $result = $this->checkCacheResult($key);
+        if ($result) {
+            return $result;
+        }
+        $lookup = $this->getLookup();
+        $result = $lookup->lookup($this->query, 'check_transfer');
+        $this->saveCacheResult($result, $key);
+        return $result;
     }
 }
