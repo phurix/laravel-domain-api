@@ -186,9 +186,11 @@ class Service
         }
         $lookup = $this->getLookup();
         $results = $lookup->suggest($this->query, $tlds, $services);
-        $attributes = $results['attributes'];
-        $this->saveCacheResult($attributes, $key);
-        return $attributes;
+        $this->saveCacheResult($results, $key);
+        if (empty($results['attributes'])) {
+            throw new \RuntimeException($results['response'], $results['code']);
+        }
+        return $results['attributes'];
     }
 
     public function setQuery(string $query): Service
