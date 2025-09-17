@@ -11,10 +11,9 @@ class WhoisCommand extends Command
     protected $signature = ServiceProvider::NAMESPACE . ':whois {domain}';
     protected $description = 'Perform a whois lookup on a domain';
 
-    public function handle(): int
+    public function handle(Service $service): int
     {
         $domain = $this->argument('domain');
-        $service = new Service();
         $result = $service
             ->setQuery($domain)
             ->whois();

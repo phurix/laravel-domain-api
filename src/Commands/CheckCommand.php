@@ -11,10 +11,9 @@ class CheckCommand extends Command
     protected $signature = ServiceProvider::NAMESPACE . ':check {domain}';
     protected $description = 'Check if a domain is available or transferable';
 
-    public function handle(): int
+    public function handle(Service $service): int
     {
         $domain = $this->argument('domain');
-        $service = new Service();
         $service->setQuery($domain);
         if ($service->isAvailable()) {
             $this->info(sprintf('Domain %s is available for registration.', $domain));
