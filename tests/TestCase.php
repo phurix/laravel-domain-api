@@ -3,19 +3,32 @@
 namespace Deaduseful\DomainApi\Tests;
 
 use Deaduseful\DomainApi\ServiceProvider;
-use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 
 abstract class TestCase extends BaseTestCase
 {
-    public function createApplication()
+    use CreatesApplication;
+
+    protected function setUp(): void
     {
-        $app = require __DIR__ . '/../vendor/laravel/laravel/bootstrap/app.php';
-
-        $app->make(Kernel::class)->bootstrap();
-
-        $app->register(ServiceProvider::class);
-
-        return $app;
+        parent::setUp();
+        
+        // Register the service provider for testing
+        $this->app->register(ServiceProvider::class);
+        
+        // Set up test environment
+        $this->app['config']->set('cache.default', 'array');
+        $this->app['config']->set('queue.default', 'sync');
+        
+        // Set up test configuration for domain API
+        $this->app['config']->set('domainapi.opensrs.test', [
+            'username' => 'test_username',
+            'key' => 'test_key',
+        ]);
+        
+        $this->app['config']->set('domainapi.opensrs.live', [
+            'username' => 'live_username',
+            'key' => 'live_key',
+        ]);
     }
 }
