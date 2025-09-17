@@ -25,6 +25,14 @@ class ServiceProvider extends BaseProvider
     public function register()
     {
         $this->mergeConfigFrom(self::CONFIG_PATH, self::NAMESPACE);
+        
+        // Bind Service class with dependencies
+        $this->app->bind(Service::class, function ($app) {
+            return new Service(
+                $app->make('cache')->store(),
+                $app->make('config')
+            );
+        });
     }
 
     public function boot()

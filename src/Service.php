@@ -5,9 +5,10 @@ namespace Deaduseful\DomainApi;
 use Deaduseful\Opensrs\FastLookup;
 use Deaduseful\Opensrs\Lookup;
 use Deaduseful\Whois\Lookup as WhoisLookup;
+use Deaduseful\Whois\Client as WhoisClient;
 use DomainException;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Config;
+use Illuminate\Contracts\Cache\Repository as CacheRepository;
+use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use UnexpectedValueException;
 use function mb_convert_encoding;
 
@@ -22,6 +23,16 @@ class Service
 
     private string $query;
     private bool $test = false;
+    private CacheRepository $cache;
+    private ConfigRepository $config;
+
+    public function __construct(
+        CacheRepository $cache,
+        ConfigRepository $config
+    ) {
+        $this->cache = $cache;
+        $this->config = $config;
+    }
 
     public function isAvailable(): ?bool
     {
@@ -65,8 +76,8 @@ class Service
 
     private function checkCacheResult(string $key)
     {
-        if (Cache::has($key)) {
-            return Cache::get($key);
+        if ($this->cache->has($key)) {
+            return $this->cache->get($key);
         }
         return null;
     }
@@ -74,7 +85,7 @@ class Service
     private function saveCacheResult($result, string $key): void
     {
         if (empty($result) === false) {
-            Cache::put($key, $result, self::CACHE_TTL);
+            $this->cache->put($key, $result, self::CACHE_TTL);
         }
     }
 
@@ -99,9 +110,11 @@ class Service
         $result['server'] = $server;
         if (strpos($server, ':')) {
             list($server, $port) = explode(':', $server, 2);
-            $lookup = new WhoisLookup($query, $server, $port);
+            $client = new WhoisClient($server, (int)$port);
+            $lookup = new WhoisLookup($query, $client);
         } else {
-            $lookup = new WhoisLookup($query, $server);
+            $client = new WhoisClient($server);
+            $lookup = new WhoisLookup($query, $client);
         }
         $query = $lookup->query($query);
         $query = mb_convert_encoding($query, 'UTF-8', 'UTF-8');
@@ -117,7 +130,8 @@ class Service
         if ($result) {
             return $result;
         }
-        $lookup = new WhoisLookup($query);
+        $client = new WhoisClient('whois.iana.org');
+        $lookup = new WhoisLookup($query, $client);
         $result = $lookup->query($query);
         $this->saveCacheResult($result, $key);
         return $result;
@@ -159,7 +173,7 @@ class Service
 
     private function getLookup(): Lookup
     {
-        $opensrsConfig = Config::get(ServiceProvider::NAMESPACE . '.opensrs');
+        $opensrsConfig = $this->config->get(ServiceProvider::NAMESPACE . '.opensrs');
         if (!$opensrsConfig) {
             throw new DomainException('Missing Config');
         }
