@@ -1,3 +1,6 @@
 /vendor
 /.idea
 .env
+/.history
+/.phpunit.cache
+/.phpunit.result.cache
