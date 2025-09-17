@@ -11,10 +11,16 @@ use UnexpectedValueException;
 
 class Controller extends BaseController
 {
+    private Service $service;
+
+    public function __construct(Service $service)
+    {
+        $this->service = $service;
+    }
+
     public function availability(string $query): JsonResponse
     {
-        $service = new Service();
-        $result = $service
+        $result = $this->service
             ->setQuery($query)
             ->availability();
         return new JsonResponse($result);
@@ -23,8 +29,7 @@ class Controller extends BaseController
     public function transferable(Request $request, string $query): JsonResponse
     {
         $test = $request->get('test', false);
-        $service = new Service();
-        $result = $service
+        $result = $this->service
             ->setQuery($query)
             ->transferable($test);
         return new JsonResponse($result);
@@ -33,8 +38,7 @@ class Controller extends BaseController
     public function whois(string $query, ?string $server = null): JsonResponse
     {
         try {
-            $service = new Service();
-            $result = $service
+            $result = $this->service
                 ->setQuery($query)
                 ->whois($server);
             return new JsonResponse($result);
@@ -49,8 +53,7 @@ class Controller extends BaseController
         $test = $request->get('test', false);
         $tlds = $request->has('tlds') ? explode(',', $request->get('tlds')) : Service::TLDS;
         $services = $request->has('services') ? explode(',', $request->get('services')) : Service::SUGGEST_SERVICES;
-        $service = new Service();
-        $result = $service
+        $result = $this->service
             ->setQuery($query)
             ->suggest($tlds, $services, $test);
         return new JsonResponse($result);
