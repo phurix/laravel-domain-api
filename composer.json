@@ -9,12 +9,12 @@
         "ext-json": "*",
         "deaduseful/opensrs-lookup": "dev-master",
         "deaduseful/whois-lookup": "dev-master",
-        "laravel/framework": "^8.0|^9.0|^10.0"
+        "laravel/framework": "^8.0|^9.0|^10.0|^11.0"
     },
     "require-dev": {
         "barryvdh/laravel-ide-helper": "^2.12",
         "fakerphp/faker": "^1.21",
-        "laravel/laravel": "^8.0|^9.0|^10.0",
+        "laravel/laravel": "^8.0|^9.0|^10.0|^11.0",
         "mockery/mockery": "^1.4.4",
         "phpunit/phpunit": "^9.5"
     },
