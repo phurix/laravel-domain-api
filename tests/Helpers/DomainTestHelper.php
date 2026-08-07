@@ -164,7 +164,7 @@ class DomainTestHelper
     }
 
     /**
-     * Mock suggest response
+     * Mock suggest response (attributes payload returned by Service::suggest)
      */
     public static function mockSuggestResponse(): array
     {
@@ -173,5 +173,32 @@ class DomainTestHelper
             'example.net' => ['available' => true, 'price' => '14.99'],
             'example.org' => ['available' => false, 'price' => null],
         ];
+    }
+
+    /**
+     * Mock OpenSRS suggest envelope (before attributes are extracted)
+     */
+    public static function mockSuggestEnvelope(): array
+    {
+        return [
+            'response' => 'Command completed successfully',
+            'code' => 200,
+            'status' => 'success',
+            'attributes' => self::mockSuggestResponse(),
+        ];
+    }
+
+    /**
+     * Mock IANA whois response text used for server discovery
+     */
+    public static function mockIanaWhoisResponse(string $whoisServer = 'whois.verisign-grs.com'): string
+    {
+        return implode(PHP_EOL, [
+            '% IANA WHOIS server',
+            'domain:       COM',
+            'whois:        ' . $whoisServer,
+            'status:       ACTIVE',
+            'source:       IANA',
+        ]);
     }
 }

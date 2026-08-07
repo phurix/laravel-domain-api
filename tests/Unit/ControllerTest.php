@@ -203,6 +203,82 @@ class ControllerTest extends BaseTestCase
         $this->assertArrayHasKey('raw', $data);
     }
 
+    public function test_transferable_returns_json_and_wires_set_test(): void
+    {
+        $mockService = Mockery::mock(Service::class);
+        $mockService->shouldReceive('setQuery')
+            ->once()
+            ->with('example.com')
+            ->andReturnSelf();
+        $mockService->shouldReceive('setTest')
+            ->once()
+            ->with(true)
+            ->andReturnSelf();
+        $mockService->shouldReceive('transferable')
+            ->once()
+            ->andReturn(DomainTestHelper::mockTransferableResponse());
+
+        $controller = new Controller($mockService);
+        $request = Request::create('/domain-api/example.com/transferable', 'GET', ['test' => '1']);
+        $response = $controller->transferable($request, 'example.com');
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $data = json_decode($response->getContent(), true);
+        $this->assertSame(1, $data['attributes']['transferrable']);
+    }
+
+    public function test_suggest_returns_json_with_default_params(): void
+    {
+        $mockService = Mockery::mock(Service::class);
+        $mockService->shouldReceive('setQuery')
+            ->once()
+            ->with('example')
+            ->andReturnSelf();
+        $mockService->shouldReceive('setTest')
+            ->once()
+            ->with(false)
+            ->andReturnSelf();
+        $mockService->shouldReceive('suggest')
+            ->once()
+            ->with(Service::TLDS, Service::SUGGEST_SERVICES)
+            ->andReturn(DomainTestHelper::mockSuggestResponse());
+
+        $controller = new Controller($mockService);
+        $request = Request::create('/domain-api/example/suggest', 'GET');
+        $response = $controller->suggest($request, 'example');
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $data = json_decode($response->getContent(), true);
+        $this->assertArrayHasKey('example.com', $data);
+    }
+
+    public function test_suggest_passes_custom_tlds_and_services(): void
+    {
+        $mockService = Mockery::mock(Service::class);
+        $mockService->shouldReceive('setQuery')
+            ->once()
+            ->with('example')
+            ->andReturnSelf();
+        $mockService->shouldReceive('setTest')
+            ->once()
+            ->with(true)
+            ->andReturnSelf();
+        $mockService->shouldReceive('suggest')
+            ->once()
+            ->with(['com', 'net'], ['lookup', 'suggestion'])
+            ->andReturn(DomainTestHelper::mockSuggestResponse());
+
+        $controller = new Controller($mockService);
+        $request = Request::create('/domain-api/example/suggest', 'GET', [
+            'test' => 'true',
+            'tlds' => 'com,net',
+            'services' => 'lookup,suggestion',
+        ]);
+        $response = $controller->suggest($request, 'example');
+
+        $this->assertEquals(200, $response->getStatusCode());
+    }
+
     public function test_lookup_returns_json_response(): void
     {
         $payload = DomainTestHelper::mockRdapResponse();
