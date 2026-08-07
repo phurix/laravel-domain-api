@@ -48,6 +48,19 @@ class Controller extends BaseController
         }
     }
 
+    public function rdap(string $query, ?string $server = null): JsonResponse
+    {
+        try {
+            $result = $this->service
+                ->setQuery($query)
+                ->rdap($server);
+            return new JsonResponse($result);
+        } catch (DomainException|UnexpectedValueException $exception) {
+            $result = ['error' => $exception->getMessage()];
+            return new JsonResponse($result, Response::HTTP_BAD_REQUEST);
+        }
+    }
+
     public function suggest(Request $request, string $query): JsonResponse
     {
         $test = $request->get('test', false);

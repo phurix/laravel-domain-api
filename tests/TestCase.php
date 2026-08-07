@@ -4,6 +4,7 @@ namespace Deaduseful\DomainApi\Tests;
 
 use Deaduseful\DomainApi\ServiceProvider;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
+use Spatie\Rdap\RdapServiceProvider;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -14,6 +15,7 @@ abstract class TestCase extends BaseTestCase
         parent::setUp();
         
         // Register the service provider for testing
+        $this->app->register(RdapServiceProvider::class);
         $this->app->register(ServiceProvider::class);
         
         // Set up test environment

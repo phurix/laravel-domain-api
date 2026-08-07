@@ -69,6 +69,7 @@ class ControllerTest extends BaseTestCase
         $this->assertTrue(method_exists($controller, 'availability'));
         $this->assertTrue(method_exists($controller, 'transferable'));
         $this->assertTrue(method_exists($controller, 'whois'));
+        $this->assertTrue(method_exists($controller, 'rdap'));
         $this->assertTrue(method_exists($controller, 'suggest'));
     }
 
@@ -164,5 +165,40 @@ class ControllerTest extends BaseTestCase
         $data = json_decode($response->getContent(), true);
         $this->assertArrayHasKey('error', $data);
         $this->assertEquals('Test exception', $data['error']);
+    }
+
+    public function test_rdap_handles_domain_exception(): void
+    {
+        $mockService = Mockery::mock(Service::class);
+        $mockService->shouldReceive('setQuery')
+            ->with('invalid-domain')
+            ->andReturnSelf();
+        $mockService->shouldReceive('rdap')
+            ->andThrow(new DomainException('Invalid Domain Name'));
+
+        $controller = new Controller($mockService);
+        $response = $controller->rdap('invalid-domain');
+
+        $this->assertEquals(Response::HTTP_BAD_REQUEST, $response->getStatusCode());
+        $data = json_decode($response->getContent(), true);
+        $this->assertEquals('Invalid Domain Name', $data['error']);
+    }
+
+    public function test_rdap_returns_json_response(): void
+    {
+        $mockService = Mockery::mock(Service::class);
+        $mockService->shouldReceive('setQuery')
+            ->with('example.com')
+            ->andReturnSelf();
+        $mockService->shouldReceive('rdap')
+            ->andReturn(DomainTestHelper::mockRdapResponse());
+
+        $controller = new Controller($mockService);
+        $response = $controller->rdap('example.com');
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $data = json_decode($response->getContent(), true);
+        $this->assertSame('rdap', $data['protocol']);
+        $this->assertArrayHasKey('raw', $data);
     }
 }

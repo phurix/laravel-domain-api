@@ -31,6 +31,7 @@ class SimpleServiceTest extends TestCase
         $this->assertTrue(method_exists($service, 'availability'));
         $this->assertTrue(method_exists($service, 'transferable'));
         $this->assertTrue(method_exists($service, 'whois'));
+        $this->assertTrue(method_exists($service, 'rdap'));
         $this->assertTrue(method_exists($service, 'suggest'));
         $this->assertTrue(method_exists($service, 'isAvailable'));
         $this->assertTrue(method_exists($service, 'canTransfer'));

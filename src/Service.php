@@ -2,6 +2,7 @@
 
 namespace Deaduseful\DomainApi;
 
+use Deaduseful\DomainApi\Rdap\RdapNormaliser;
 use Deaduseful\Opensrs\FastLookup;
 use Deaduseful\Opensrs\Lookup;
 use Deaduseful\Whois\Lookup as WhoisLookup;
@@ -9,6 +10,12 @@ use Deaduseful\Whois\Client as WhoisClient;
 use DomainException;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
+use Illuminate\Http\Client\RequestException;
+use Spatie\Rdap\CouldNotFindRdapServer;
+use Spatie\Rdap\Exceptions\InvalidRdapResponse;
+use Spatie\Rdap\Exceptions\RdapException;
+use Spatie\Rdap\Exceptions\RdapRequestTimedOut;
+use Spatie\Rdap\Rdap;
 use UnexpectedValueException;
 use function mb_convert_encoding;
 
@@ -25,13 +32,24 @@ class Service
     private bool $test = false;
     private CacheRepository $cache;
     private ConfigRepository $config;
+    private ?Rdap $rdap;
+    private RdapNormaliser $rdapNormaliser;
 
     public function __construct(
         CacheRepository $cache,
-        ConfigRepository $config
+        ConfigRepository $config,
+        ?Rdap $rdap = null,
+        ?RdapNormaliser $rdapNormaliser = null
     ) {
         $this->cache = $cache;
         $this->config = $config;
+        $this->rdap = $rdap;
+        $this->rdapNormaliser = $rdapNormaliser ?? new RdapNormaliser();
+    }
+
+    private function rdapClient(): Rdap
+    {
+        return $this->rdap ??= app(Rdap::class);
     }
 
     public function isAvailable(): ?bool
@@ -151,6 +169,52 @@ class Service
             }
         }
         return $server;
+    }
+
+    public function rdap(?string $server = null): array
+    {
+        $this->validateDomain($this->query);
+        $key = __CLASS__ . PATH_SEPARATOR . __FUNCTION__ . PATH_SEPARATOR . serialize(func_get_args());
+        $result = $this->checkCacheResult($key);
+        if ($result) {
+            return $result;
+        }
+
+        $query = $this->query;
+        $dnsServer = $server;
+
+        try {
+            if ($dnsServer === null) {
+                $dnsServer = $this->rdapClient()->dns()->getServerForDomain($query);
+            }
+
+            if (empty($dnsServer)) {
+                throw new DomainException('Unable to find RDAP server for ' . $this->rdapNormaliser->extractTld($query));
+            }
+
+            $response = $this->rdapClient()->domain($query, dnsServer: $dnsServer);
+
+            if ($response === null) {
+                $result = $this->rdapNormaliser->availablePayload($query, rtrim($dnsServer, '/') . '/');
+            } else {
+                $result = $this->rdapNormaliser->normalise(
+                    $query,
+                    rtrim($dnsServer, '/') . '/',
+                    $response
+                );
+            }
+        } catch (CouldNotFindRdapServer $exception) {
+            throw new DomainException(
+                'Unable to find RDAP server for ' . $this->rdapNormaliser->extractTld($query),
+                0,
+                $exception
+            );
+        } catch (RdapRequestTimedOut | InvalidRdapResponse | RdapException | RequestException $exception) {
+            throw new UnexpectedValueException($exception->getMessage(), (int) $exception->getCode(), $exception);
+        }
+
+        $this->saveCacheResult($result, $key);
+        return $result;
     }
 
     public function suggest(array $tlds = self::TLDS, array $services = self::SUGGEST_SERVICES): array

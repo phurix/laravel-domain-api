@@ -96,6 +96,7 @@ class SimpleMockEndpointTest extends TestCase
             'domain-api/example.com/available',
             'domain-api/example.com/transferable',
             'domain-api/example.com/whois',
+            'domain-api/example.com/rdap',
             'domain-api/example/suggest',
         ];
         
@@ -116,6 +117,7 @@ class SimpleMockEndpointTest extends TestCase
             'domain-api/example.com/available',
             'domain-api/example.com/transferable',
             'domain-api/example.com/whois',
+            'domain-api/example.com/rdap',
             'domain-api/example/suggest',
         ];
         

@@ -20,4 +20,8 @@ return [
         'middleware' => [env('DOMAIN_API_MIDDLEWARE', 'api_token')],
         'name' => env('DOMAIN_API_NAME', 'domain-api.'),
     ],
+    'rdap' => [
+        'timeout' => env('DOMAIN_API_RDAP_TIMEOUT', 30),
+        'user_agent' => env('DOMAIN_API_RDAP_USER_AGENT', 'DeadUseful Domain API/2.1'),
+    ],
 ];

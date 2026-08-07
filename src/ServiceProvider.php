@@ -3,6 +3,7 @@
 namespace Deaduseful\DomainApi;
 
 use Deaduseful\DomainApi\Commands\CheckCommand;
+use Deaduseful\DomainApi\Commands\RdapCommand;
 use Deaduseful\DomainApi\Commands\SuggestCommand;
 use Deaduseful\DomainApi\Commands\WhoisCommand;
 use Illuminate\Routing\Router;
@@ -19,6 +20,7 @@ class ServiceProvider extends BaseProvider
     private const COMMANDS = [
         CheckCommand::class,
         WhoisCommand::class,
+        RdapCommand::class,
         SuggestCommand::class,
     ];
 
@@ -30,7 +32,9 @@ class ServiceProvider extends BaseProvider
         $this->app->bind(Service::class, function ($app) {
             return new Service(
                 $app->make('cache')->store(),
-                $app->make('config')
+                $app->make('config'),
+                $app->make(\Spatie\Rdap\Rdap::class),
+                $app->make(Rdap\RdapNormaliser::class)
             );
         });
     }

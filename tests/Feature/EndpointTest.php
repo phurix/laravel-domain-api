@@ -68,6 +68,33 @@ class EndpointTest extends TestCase
         $this->assertNotEmpty($data, 'Response should not be empty');
     }
 
+    public function test_rdap_endpoint_returns_valid_response(): void
+    {
+        $raw = DomainTestHelper::mockRdapResponse()['raw'];
+
+        \Illuminate\Support\Facades\Http::fake([
+            'data.iana.org/rdap/dns.json' => \Illuminate\Support\Facades\Http::response([
+                'services' => [
+                    [['com'], ['https://rdap.verisign.com/com/v1/']],
+                ],
+            ]),
+            'rdap.verisign.com/*' => \Illuminate\Support\Facades\Http::response($raw),
+        ]);
+
+        $response = $this->withoutMiddleware()
+            ->getJson('domain-api/example.com/rdap');
+
+        $this->assertNotEquals(404, $response->getStatusCode(), 'RDAP endpoint should exist');
+        $this->assertIsArray($response->json(), 'Response should be JSON array');
+
+        $data = $response->json();
+        if ($response->getStatusCode() === 200) {
+            $this->assertSame('rdap', $data['protocol']);
+            $this->assertArrayHasKey('raw', $data);
+            $this->assertArrayHasKey('status', $data);
+        }
+    }
+
     /**
      * @dataProvider validDomainProvider
      */
