@@ -3,6 +3,7 @@
 namespace Deaduseful\DomainApi;
 
 use Deaduseful\DomainApi\Commands\CheckCommand;
+use Deaduseful\DomainApi\Commands\LookupCommand;
 use Deaduseful\DomainApi\Commands\RdapCommand;
 use Deaduseful\DomainApi\Commands\SuggestCommand;
 use Deaduseful\DomainApi\Commands\WhoisCommand;
@@ -21,6 +22,7 @@ class ServiceProvider extends BaseProvider
         CheckCommand::class,
         WhoisCommand::class,
         RdapCommand::class,
+        LookupCommand::class,
         SuggestCommand::class,
     ];
 

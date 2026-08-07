@@ -95,6 +95,35 @@ class EndpointTest extends TestCase
         }
     }
 
+    public function test_lookup_endpoint_returns_valid_response(): void
+    {
+        $raw = DomainTestHelper::mockRdapResponse()['raw'];
+
+        \Illuminate\Support\Facades\Http::fake([
+            'data.iana.org/rdap/dns.json' => \Illuminate\Support\Facades\Http::response([
+                'services' => [
+                    [['com'], ['https://rdap.verisign.com/com/v1/']],
+                ],
+            ]),
+            'rdap.verisign.com/*' => \Illuminate\Support\Facades\Http::response($raw),
+        ]);
+
+        $response = $this->withoutMiddleware()
+            ->getJson('domain-api/example.com/lookup');
+
+        $this->assertNotEquals(404, $response->getStatusCode(), 'Lookup endpoint should exist');
+        $this->assertIsArray($response->json(), 'Response should be JSON array');
+
+        $data = $response->json();
+        if ($response->getStatusCode() === 200) {
+            $this->assertArrayHasKey('fallback', $data);
+            $this->assertArrayHasKey('protocol', $data);
+            $this->assertArrayHasKey('status', $data);
+            $this->assertArrayHasKey('raw', $data);
+            $this->assertContains($data['protocol'], ['rdap', 'whois']);
+        }
+    }
+
     /**
      * @dataProvider validDomainProvider
      */

@@ -35,22 +35,48 @@ class Service
     private ConfigRepository $config;
     private ?Rdap $rdap;
     private RdapNormaliser $rdapNormaliser;
+    private ?FastLookup $fastLookup;
+    private ?Lookup $opensrsLookup;
+    /** @var callable|null fn(string $query, string $host, ?int $port): WhoisLookup */
+    private $whoisFactory;
 
     public function __construct(
         CacheRepository $cache,
         ConfigRepository $config,
         ?Rdap $rdap = null,
-        ?RdapNormaliser $rdapNormaliser = null
+        ?RdapNormaliser $rdapNormaliser = null,
+        ?FastLookup $fastLookup = null,
+        ?Lookup $opensrsLookup = null,
+        ?callable $whoisFactory = null
     ) {
         $this->cache = $cache;
         $this->config = $config;
         $this->rdap = $rdap;
         $this->rdapNormaliser = $rdapNormaliser ?? new RdapNormaliser();
+        $this->fastLookup = $fastLookup;
+        $this->opensrsLookup = $opensrsLookup;
+        $this->whoisFactory = $whoisFactory;
     }
 
     private function rdapClient(): Rdap
     {
         return $this->rdap ??= app(Rdap::class);
+    }
+
+    private function fastLookupClient(): FastLookup
+    {
+        return $this->fastLookup ??= new FastLookup();
+    }
+
+    private function createWhoisLookup(string $query, string $host, ?int $port = null): WhoisLookup
+    {
+        if ($this->whoisFactory !== null) {
+            return ($this->whoisFactory)($query, $host, $port);
+        }
+
+        $client = $port !== null ? new WhoisClient($host, $port) : new WhoisClient($host);
+
+        return new WhoisLookup($query, $client);
     }
 
     public function isAvailable(): ?bool
@@ -76,8 +102,7 @@ class Service
         if ($result) {
             return $result;
         }
-        $lookup = new FastLookup();
-        $result = $lookup->lookup($this->query);
+        $result = $this->fastLookupClient()->lookup($this->query);
         $successKeys = array_keys(FastLookup::SUCCESS_RESPONSE_CODES);
         if (in_array($result['code'], $successKeys) === false) {
             throw new UnexpectedValueException($result['response'], $result['code']);
@@ -86,14 +111,14 @@ class Service
         return $result;
     }
 
-    private function validateDomain(string $query): void
+    protected function validateDomain(string $query): void
     {
         if (filter_var($query, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME) === false) {
             throw new DomainException('Invalid Domain Name');
         }
     }
 
-    private function checkCacheResult(string $key)
+    protected function checkCacheResult(string $key)
     {
         if ($this->cache->has($key)) {
             return $this->cache->get($key);
@@ -101,7 +126,7 @@ class Service
         return null;
     }
 
-    private function saveCacheResult($result, string $key): void
+    protected function saveCacheResult($result, string $key): void
     {
         if (empty($result) === false) {
             $this->cache->put($key, $result, self::CACHE_TTL);
@@ -127,17 +152,16 @@ class Service
             throw new DomainException('Unable to find whois server for ' . $result['tld']);
         }
         $result['server'] = $server;
-        if (strpos($server, ':')) {
-            list($server, $port) = explode(':', $server, 2);
-            $client = new WhoisClient($server, (int)$port);
-            $lookup = new WhoisLookup($query, $client);
-        } else {
-            $client = new WhoisClient($server);
-            $lookup = new WhoisLookup($query, $client);
+        $port = null;
+        $host = $server;
+        if (strpos($server, ':') !== false) {
+            list($host, $port) = explode(':', $server, 2);
+            $port = (int) $port;
         }
-        $query = $lookup->query($query);
-        $query = mb_convert_encoding($query, 'UTF-8', 'UTF-8');
-        $result['result'] = $query;
+        $lookup = $this->createWhoisLookup($query, $host, $port);
+        $queryResult = $lookup->query($query);
+        $queryResult = mb_convert_encoding($queryResult, 'UTF-8', 'UTF-8');
+        $result['result'] = $queryResult;
         $this->saveCacheResult($result, $key);
         return $result;
     }
@@ -149,14 +173,13 @@ class Service
         if ($result) {
             return $result;
         }
-        $client = new WhoisClient('whois.iana.org');
-        $lookup = new WhoisLookup($query, $client);
+        $lookup = $this->createWhoisLookup($query, 'whois.iana.org');
         $result = $lookup->query($query);
         $this->saveCacheResult($result, $key);
         return $result;
     }
 
-    private function parseWhoisServer(string $result): string
+    protected function parseWhoisServer(string $result): string
     {
         $server = '';
         $lines = explode(PHP_EOL, $result);
@@ -218,6 +241,66 @@ class Service
         return $result;
     }
 
+    /**
+     * RDAP-first domain lookup with WHOIS fallback on hard RDAP failure.
+     *
+     * status "available" means the domain is not in RDDS / unknown to the directory,
+     * not that it is safe to register. Buy-path availability remains availability().
+     *
+     * @return array<string, mixed>
+     */
+    public function lookup(): array
+    {
+        $key = __CLASS__ . PATH_SEPARATOR . __FUNCTION__ . PATH_SEPARATOR . serialize(func_get_args());
+        $cached = $this->checkCacheResult($key);
+        if ($cached) {
+            return $cached;
+        }
+
+        try {
+            $result = $this->rdap();
+            $result['fallback'] = false;
+        } catch (DomainException|UnexpectedValueException) {
+            $result = $this->whoisLookupPayload($this->whois());
+        }
+
+        $this->saveCacheResult($result, $key);
+        return $result;
+    }
+
+    /**
+     * Map a whois() result onto the LookupResult-style contract (issue 17).
+     * No rich WHOIS parse — structured fields stay empty/unknown.
+     *
+     * @param array{tld?: string, server?: string, result?: string} $whois
+     * @return array<string, mixed>
+     */
+    private function whoisLookupPayload(array $whois): array
+    {
+        $text = $whois['result'] ?? '';
+
+        return [
+            'domain' => $this->query,
+            'tld' => $whois['tld'] ?? $this->rdapNormaliser->extractTld($this->query),
+            'status' => RdapNormaliser::STATUS_UNKNOWN,
+            'protocol' => 'whois',
+            'server' => $whois['server'] ?? null,
+            'registrar' => null,
+            'nameservers' => [],
+            'contacts' => [],
+            'created_date' => null,
+            'updated_date' => null,
+            'expiry_date' => null,
+            'data' => [
+                'whois_text' => $text,
+            ],
+            'raw' => [
+                'whois' => $text,
+            ],
+            'fallback' => true,
+        ];
+    }
+
     public function suggest(array $tlds = self::TLDS, array $services = self::SUGGEST_SERVICES): array
     {
         $tlds = empty($tlds) ? self::TLDS : $tlds;
@@ -238,20 +321,24 @@ class Service
 
     private function getLookup(): Lookup
     {
+        if ($this->opensrsLookup !== null) {
+            return $this->opensrsLookup;
+        }
+
         $opensrsConfig = $this->config->get(ServiceProvider::NAMESPACE . '.opensrs');
         if (!$opensrsConfig) {
             throw new DomainException('Missing Config');
         }
         $mode = $this->test ? 'test' : 'live';
-        $config = $opensrsConfig[$mode];
+        $config = $opensrsConfig[$mode] ?? null;
         if (empty($config)) {
             throw new DomainException(sprintf('Missing "%s" Config', $mode));
         }
-        $configUsername = $config['username'];
+        $configUsername = $config['username'] ?? null;
         if (empty($configUsername)) {
             throw new DomainException(sprintf('Missing "%s" Config Username', $mode));
         }
-        $configKey = $config['key'];
+        $configKey = $config['key'] ?? null;
         if (empty($configKey)) {
             throw new DomainException(sprintf('Missing "%s" Config Key', $mode));
         }
@@ -261,6 +348,12 @@ class Service
     public function setQuery(string $query): Service
     {
         $this->query = $query;
+        return $this;
+    }
+
+    public function setTest(bool $test = false): self
+    {
+        $this->test = $test;
         return $this;
     }
 

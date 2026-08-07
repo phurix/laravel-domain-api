@@ -31,7 +31,8 @@ class Controller extends BaseController
         $test = $request->get('test', false);
         $result = $this->service
             ->setQuery($query)
-            ->transferable($test);
+            ->setTest((bool) $test)
+            ->transferable();
         return new JsonResponse($result);
     }
 
@@ -61,6 +62,19 @@ class Controller extends BaseController
         }
     }
 
+    public function lookup(string $query): JsonResponse
+    {
+        try {
+            $result = $this->service
+                ->setQuery($query)
+                ->lookup();
+            return new JsonResponse($result);
+        } catch (DomainException|UnexpectedValueException $exception) {
+            $result = ['error' => $exception->getMessage()];
+            return new JsonResponse($result, Response::HTTP_BAD_REQUEST);
+        }
+    }
+
     public function suggest(Request $request, string $query): JsonResponse
     {
         $test = $request->get('test', false);
@@ -68,7 +82,8 @@ class Controller extends BaseController
         $services = $request->has('services') ? explode(',', $request->get('services')) : Service::SUGGEST_SERVICES;
         $result = $this->service
             ->setQuery($query)
-            ->suggest($tlds, $services, $test);
+            ->setTest((bool) $test)
+            ->suggest($tlds, $services);
         return new JsonResponse($result);
     }
 }
