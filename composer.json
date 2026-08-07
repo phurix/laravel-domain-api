@@ -54,6 +54,9 @@
         "qa": [
             "@test",
             "@phpcs"
+        ],
+        "examples": [
+            "@php examples/smoke.php"
         ]
     },
     "config": {
