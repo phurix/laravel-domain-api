@@ -19,6 +19,20 @@ abstract class TestCase extends BaseTestCase
         // Set up test environment
         $this->app['config']->set('cache.default', 'array');
         $this->app['config']->set('queue.default', 'sync');
+        $this->app['config']->set('session.driver', 'array');
+        $this->app['config']->set('database.default', 'sqlite');
+        $this->app['config']->set('database.connections.sqlite', [
+            'driver' => 'sqlite',
+            'database' => ':memory:',
+            'prefix' => '',
+            'foreign_key_constraints' => true,
+        ]);
+        $this->app['config']->set('database.connections.testing', [
+            'driver' => 'sqlite',
+            'database' => ':memory:',
+            'prefix' => '',
+            'foreign_key_constraints' => true,
+        ]);
         
         // Set up test configuration for domain API
         $this->app['config']->set('domainapi.opensrs.test', [
