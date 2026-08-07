@@ -105,7 +105,7 @@ class LookupServiceTest extends TestCase
         $rdap = Mockery::mock(Rdap::class);
         $rdap->shouldReceive('dns')->andReturn($dns);
 
-        $service = new class($cache, $config, $rdap, new RdapNormaliser(), $whois) extends Service {
+        $service = new class ($cache, $config, $rdap, new RdapNormaliser(), $whois) extends Service {
             private array $whoisFixture;
 
             public function __construct($cache, $config, $rdap, $normaliser, array $whoisFixture)
@@ -146,7 +146,7 @@ class LookupServiceTest extends TestCase
         $rdap->shouldReceive('dns')->andReturn($dns);
         $rdap->shouldReceive('domain')->andThrow(InvalidRdapResponse::make('example.com'));
 
-        $service = new class($cache, $config, $rdap, new RdapNormaliser(), $whois) extends Service {
+        $service = new class ($cache, $config, $rdap, new RdapNormaliser(), $whois) extends Service {
             private array $whoisFixture;
 
             public function __construct($cache, $config, $rdap, $normaliser, array $whoisFixture)
@@ -180,7 +180,7 @@ class LookupServiceTest extends TestCase
         $rdap = Mockery::mock(Rdap::class);
         $rdap->shouldReceive('dns')->andReturn($dns);
 
-        $service = new class($cache, $config, $rdap, new RdapNormaliser()) extends Service {
+        $service = new class ($cache, $config, $rdap, new RdapNormaliser()) extends Service {
             public function whois(string $server = null): array
             {
                 throw new DomainException('Unable to find whois server for com');

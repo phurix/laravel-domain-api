@@ -20,7 +20,7 @@ class ServiceHelpersTest extends TestCase
 
     private function makeService(?CacheRepository $cache = null): Service
     {
-        return new class(
+        return new class (
             $cache ?? Mockery::mock(CacheRepository::class),
             Mockery::mock(ConfigRepository::class)
         ) extends Service {
