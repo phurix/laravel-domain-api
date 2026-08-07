@@ -32,7 +32,7 @@ class ControllerTest extends BaseTestCase
             ->andReturn(DomainTestHelper::mockAvailabilityResponse());
 
         // Create controller and inject mock service
-        $controller = new class($mockService) extends Controller {
+        $controller = new class ($mockService) extends Controller {
             private $service;
             
             public function __construct($service)
@@ -92,7 +92,7 @@ class ControllerTest extends BaseTestCase
             ->andThrow(new DomainException('Invalid Domain Name'));
 
         // Create controller with mock service
-        $controller = new class($mockService) extends Controller {
+        $controller = new class ($mockService) extends Controller {
             private $service;
             
             public function __construct($service)
@@ -135,7 +135,7 @@ class ControllerTest extends BaseTestCase
             ->andThrow(new UnexpectedValueException('Test exception', 500));
 
         // Create controller with mock service
-        $controller = new class($mockService) extends Controller {
+        $controller = new class ($mockService) extends Controller {
             private $service;
             
             public function __construct($service)

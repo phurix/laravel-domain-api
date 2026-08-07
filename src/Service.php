@@ -17,6 +17,7 @@ use Spatie\Rdap\Exceptions\RdapException;
 use Spatie\Rdap\Exceptions\RdapRequestTimedOut;
 use Spatie\Rdap\Rdap;
 use UnexpectedValueException;
+
 use function mb_convert_encoding;
 
 class Service
