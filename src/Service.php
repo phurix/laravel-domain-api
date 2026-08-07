@@ -218,6 +218,66 @@ class Service
         return $result;
     }
 
+    /**
+     * RDAP-first domain lookup with WHOIS fallback on hard RDAP failure.
+     *
+     * status "available" means the domain is not in RDDS / unknown to the directory,
+     * not that it is safe to register. Buy-path availability remains availability().
+     *
+     * @return array<string, mixed>
+     */
+    public function lookup(): array
+    {
+        $key = __CLASS__ . PATH_SEPARATOR . __FUNCTION__ . PATH_SEPARATOR . serialize(func_get_args());
+        $cached = $this->checkCacheResult($key);
+        if ($cached) {
+            return $cached;
+        }
+
+        try {
+            $result = $this->rdap();
+            $result['fallback'] = false;
+        } catch (DomainException|UnexpectedValueException) {
+            $result = $this->whoisLookupPayload($this->whois());
+        }
+
+        $this->saveCacheResult($result, $key);
+        return $result;
+    }
+
+    /**
+     * Map a whois() result onto the LookupResult-style contract (issue 17).
+     * No rich WHOIS parse — structured fields stay empty/unknown.
+     *
+     * @param array{tld?: string, server?: string, result?: string} $whois
+     * @return array<string, mixed>
+     */
+    private function whoisLookupPayload(array $whois): array
+    {
+        $text = $whois['result'] ?? '';
+
+        return [
+            'domain' => $this->query,
+            'tld' => $whois['tld'] ?? $this->rdapNormaliser->extractTld($this->query),
+            'status' => RdapNormaliser::STATUS_UNKNOWN,
+            'protocol' => 'whois',
+            'server' => $whois['server'] ?? null,
+            'registrar' => null,
+            'nameservers' => [],
+            'contacts' => [],
+            'created_date' => null,
+            'updated_date' => null,
+            'expiry_date' => null,
+            'data' => [
+                'whois_text' => $text,
+            ],
+            'raw' => [
+                'whois' => $text,
+            ],
+            'fallback' => true,
+        ];
+    }
+
     public function suggest(array $tlds = self::TLDS, array $services = self::SUGGEST_SERVICES): array
     {
         $tlds = empty($tlds) ? self::TLDS : $tlds;

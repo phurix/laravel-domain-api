@@ -45,6 +45,15 @@ class SimpleMockEndpointTest extends TestCase
         $this->assertIsArray($response->json(), 'Response should be JSON array');
     }
 
+    public function test_lookup_endpoint_returns_response(): void
+    {
+        $response = $this->withoutMiddleware()
+            ->getJson('domain-api/example.com/lookup');
+
+        $this->assertNotEquals(404, $response->getStatusCode(), 'Lookup endpoint should exist');
+        $this->assertIsArray($response->json(), 'Response should be JSON array');
+    }
+
     public function test_suggest_endpoint_returns_response(): void
     {
         $response = $this->withoutMiddleware()
@@ -97,6 +106,7 @@ class SimpleMockEndpointTest extends TestCase
             'domain-api/example.com/transferable',
             'domain-api/example.com/whois',
             'domain-api/example.com/rdap',
+            'domain-api/example.com/lookup',
             'domain-api/example/suggest',
         ];
         
@@ -118,6 +128,7 @@ class SimpleMockEndpointTest extends TestCase
             'domain-api/example.com/transferable',
             'domain-api/example.com/whois',
             'domain-api/example.com/rdap',
+            'domain-api/example.com/lookup',
             'domain-api/example/suggest',
         ];
         
