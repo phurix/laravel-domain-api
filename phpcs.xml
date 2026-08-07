@@ -4,7 +4,6 @@
 
     <description>PHPCS ruleset for Laravel.</description>
 
-    <file>app</file>
     <file>tests</file>
     <file>src</file>
 
