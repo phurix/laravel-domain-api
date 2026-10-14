@@ -20,7 +20,7 @@ class RouteGenerationTest extends TestCase
         Route::setFacadeApplication($container);
         Route::clearResolvedInstances();
 
-        Route::prefix('domain-api')->name('domain-api.')->group(dirname(__DIR__, 2) . '/../src/routes.php');
+        Route::prefix('domain-api')->name('domain-api.')->group(dirname(__DIR__, 2) . '/src/routes.php');
         $router->getRoutes()->refreshNameLookups();
         $generator = new UrlGenerator($router->getRoutes(), Request::create('http://fixture.invalid'));
 
