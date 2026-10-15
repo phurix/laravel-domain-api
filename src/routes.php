@@ -9,7 +9,7 @@ Route::group([
     Route::get('transferable', 'Controller@transferable')->name('transferable');
     Route::get('whois/{server}', 'Controller@whois')->name('whois.server');
     Route::get('whois', 'Controller@whois')->name('whois');
-    Route::get('rdap/{server}', 'Controller@rdap')->name('rdap.server');
+    Route::get('rdap/{server}', 'Controller@rdap')->where('server', '.+')->name('rdap.server');
     Route::get('rdap', 'Controller@rdap')->name('rdap');
     Route::get('lookup', 'Controller@lookup')->name('lookup');
     Route::get('suggest', 'Controller@suggest')->name('suggest');
