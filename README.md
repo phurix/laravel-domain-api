@@ -176,3 +176,14 @@ composer qa      # both
 ## Licence
 
 MIT
+
+
+## Release candidate: 2.2.1
+
+PR #5 preserves the named base endpoints `domain-api.whois` and `domain-api.rdap`. Server-specific endpoints use distinct `.server` names. The RDAP server is a trailing path parameter that accepts a full base URL, including its path; HTTP clients should percent-encode the server URL as one path value. Base and server routes, incoming matching and route-cache compilation are covered without supplier calls. The standalone route tests restore the previous facade state even when an assertion fails.
+
+After review and a successful supported-PHP CI matrix, merge the route correction into `main` and tag that reviewed merge commit `v2.2.1`. Do not add a manual Composer version or move an existing tag. This repository keeps the existing package identity `deaduseful/laravel-domain-api`; no default-branch identity change is required.
+
+The portal can then use `deaduseful/laravel-domain-api: ^2.2.1` through its existing private VCS repository. Resolve the release afresh, verify the lockfile's source revision belongs to the reviewed release, perform a clean installation/audit and run the portal's isolated tests and PHPStan gate. The private WHOIS/OpenSRS transitive packages still need the consumer's configured access and root-level repositories; this release does not change that boundary. No credential should be copied into the repository or release assets.
+
+Tags and publication are a separate approval step; preparing this candidate does not merge or publish it.
