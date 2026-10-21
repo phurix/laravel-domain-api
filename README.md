@@ -15,7 +15,7 @@ Private Composer dependencies (`deaduseful/whois-lookup`, `deaduseful/opensrs-lo
 
 ## Installation
 
-Add these VCS entries to the consuming Laravel application's root `composer.json` (merge them with any existing repositories):
+Add these VCS entries and the two explicit development requirements to the consuming Laravel application's root `composer.json` (merge them with existing repositories and requirements):
 
 ```json
 {
@@ -23,11 +23,17 @@ Add these VCS entries to the consuming Laravel application's root `composer.json
         { "type": "vcs", "url": "https://github.com/phurix/laravel-domain-api.git" },
         { "type": "vcs", "url": "https://github.com/deaduseful/whois-lookup.git" },
         { "type": "vcs", "url": "https://github.com/deaduseful/opensrs-lookup.git" }
-    ]
+    ],
+    "require": {
+        "deaduseful/whois-lookup": "dev-master",
+        "deaduseful/opensrs-lookup": "dev-master"
+    }
 }
 ```
 
 [Composer loads repositories from the root project only](https://getcomposer.org/doc/05-repositories.md#repository). The entries in this package's own manifest support working on the SDK; they are not inherited by consuming applications. Authentication alone does not make a private repository discoverable. The SDK's Composer name remains `deaduseful/laravel-domain-api`, even though its repository is under `phurix`.
+
+The SDK currently requires `dev-master` for these two private packages. These explicit root requirements permit development stability only for those packages while leaving the application's default `minimum-stability: stable` intact. Do not lower the application's overall stability policy. The SDK's own `minimum-stability` setting is root-only and does not grant this allowance to a consuming app; see [Composer stability flags](https://getcomposer.org/doc/04-schema.md#package-links). If either package is already explicitly required, review its existing constraint for compatibility rather than overwriting it blindly.
 
 Arrange read access to all three private repositories using your existing credential manager or a CI secret configured outside tracked files. Use repository-scoped, read-only credentials where supported; the SDK and its two private dependencies belong to different GitHub owners, so fine-grained credentials may need separate owner scopes. Do not commit tokens or auth files. Keep the application's repository entries for the private dependencies after requiring this package.
 
@@ -37,7 +43,7 @@ Then install the approved published release:
 composer require deaduseful/laravel-domain-api
 ```
 
-Composer selects a published stable version by default. This command does not promise an unreleased development-branch fix; use the release constraint approved for your application. Retain and review the resulting application lockfile.
+Composer selects a published stable SDK version by default; the explicit development allowances above apply only to its two private dependencies. This command does not promise an unreleased development-branch fix; use the release constraint approved for your application. Retain and review the resulting application lockfile.
 
 Register the providers (this package does not use Laravel package auto-discovery):
 
