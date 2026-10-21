@@ -6,8 +6,13 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   qa:
+    # Private dependency credentials are unavailable to fork pull requests.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     name: QA (PHP ${{ matrix.php }})
     runs-on: ubuntu-latest
     strategy:
@@ -18,6 +23,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up isolated Composer directories
+        run: |
+          echo "COMPOSER_HOME=$RUNNER_TEMP/sdk-composer-home" >> "$GITHUB_ENV"
+          echo "COMPOSER_CACHE_DIR=$RUNNER_TEMP/sdk-composer-cache" >> "$GITHUB_ENV"
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -27,31 +39,37 @@ jobs:
           coverage: none
           tools: composer:v2
 
-      - name: Configure Composer GitHub auth
-        env:
-          COMPOSER_AUTH_TOKEN: ${{ secrets.COMPOSER_AUTH_TOKEN }}
-        run: |
-          if [ -n "$COMPOSER_AUTH_TOKEN" ]; then
-            composer config -g github-oauth.github.com "$COMPOSER_AUTH_TOKEN"
-          else
-            echo "::error::COMPOSER_AUTH_TOKEN secret is not set. Private Composer packages (deaduseful/*) cannot be downloaded."
-            exit 1
-          fi
-
-      - name: Get Composer cache directory
-        id: composer-cache
-        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
-
-      - name: Cache Composer dependencies
+      - name: Cache Composer archives
         uses: actions/cache@v4
         with:
-          path: ${{ steps.composer-cache.outputs.dir }}
-          key: ${{ runner.os }}-php-${{ matrix.php }}-composer-${{ hashFiles('**/composer.lock') }}
+          # Cache downloaded archives only, never Composer home or auth files.
+          path: ${{ env.COMPOSER_CACHE_DIR }}/files
+          key: ${{ runner.os }}-sdk-composer-v2-php-${{ matrix.php }}-${{ hashFiles('**/composer.lock') }}
           restore-keys: |
-            ${{ runner.os }}-php-${{ matrix.php }}-composer-
+            ${{ runner.os }}-sdk-composer-v2-php-${{ matrix.php }}-
 
       - name: Install dependencies
-        run: composer install --no-progress --no-interaction --prefer-dist
+        env:
+          # Configure a read-only token for the private dependency repositories.
+          # Both variables exist only for this step; no auth is written globally.
+          COMPOSER_AUTH_TOKEN: ${{ secrets.COMPOSER_AUTH_TOKEN }}
+          COMPOSER_AUTH: '{"github-oauth":{"github.com":"${{ secrets.COMPOSER_AUTH_TOKEN }}"}}'
+        run: |
+          if [ -z "$COMPOSER_AUTH_TOKEN" ]; then
+            echo "::error::COMPOSER_AUTH_TOKEN must provide read access to the private dependency repositories."
+            exit 1
+          fi
+          composer install --no-progress --no-interaction --prefer-dist --no-scripts --no-plugins
+
+      - name: Remove temporary Composer home
+        if: always()
+        run: rm -rf -- "$COMPOSER_HOME"
+
+      - name: Verify credential boundary
+        run: |
+          test -z "${COMPOSER_AUTH:-}"
+          test -z "${COMPOSER_AUTH_TOKEN:-}"
+          test ! -e "$COMPOSER_HOME"
 
       - name: Run PHPUnit
         run: composer test
