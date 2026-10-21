@@ -15,9 +15,29 @@ Private Composer dependencies (`deaduseful/whois-lookup`, `deaduseful/opensrs-lo
 
 ## Installation
 
+Add these VCS entries to the consuming Laravel application's root `composer.json` (merge them with any existing repositories):
+
+```json
+{
+    "repositories": [
+        { "type": "vcs", "url": "https://github.com/phurix/laravel-domain-api.git" },
+        { "type": "vcs", "url": "https://github.com/deaduseful/whois-lookup.git" },
+        { "type": "vcs", "url": "https://github.com/deaduseful/opensrs-lookup.git" }
+    ]
+}
+```
+
+[Composer loads repositories from the root project only](https://getcomposer.org/doc/05-repositories.md#repository). The entries in this package's own manifest support working on the SDK; they are not inherited by consuming applications. Authentication alone does not make a private repository discoverable. The SDK's Composer name remains `deaduseful/laravel-domain-api`, even though its repository is under `phurix`.
+
+Arrange read access to all three private repositories using your existing credential manager or a CI secret configured outside tracked files. Use repository-scoped, read-only credentials where supported; the SDK and its two private dependencies belong to different GitHub owners, so fine-grained credentials may need separate owner scopes. Do not commit tokens or auth files. Keep the application's repository entries for the private dependencies after requiring this package.
+
+Then install the approved published release:
+
 ```bash
 composer require deaduseful/laravel-domain-api
 ```
+
+Composer selects a published stable version by default. This command does not promise an unreleased development-branch fix; use the release constraint approved for your application. Retain and review the resulting application lockfile.
 
 Register the providers (this package does not use Laravel package auto-discovery):
 
@@ -187,3 +207,9 @@ After review and a successful supported-PHP CI matrix, merge the route correctio
 The portal can then use `deaduseful/laravel-domain-api: ^2.2.1` through its existing private VCS repository. Resolve the release afresh, verify the lockfile's source revision belongs to the reviewed release, perform a clean installation/audit and run the portal's isolated tests and PHPStan gate. The private WHOIS/OpenSRS transitive packages still need the consumer's configured access and root-level repositories; this release does not change that boundary. No credential should be copied into the repository or release assets.
 
 Tags and publication are a separate approval step; preparing this candidate does not merge or publish it.
+
+## CI credential handling
+
+The PHP 8.2/8.3/8.4 QA job uses `COMPOSER_AUTH_TOKEN` only in the dependency-install step through step-scoped `COMPOSER_AUTH`. Configure that secret with read access to `deaduseful/whois-lookup` and `deaduseful/opensrs-lookup`; the workflow does not narrow an existing token's provider permissions. Checkout uses the read-only GitHub job token without persisting it in Git configuration.
+
+Installation disables dependency scripts and plugins while the Composer credential is available. An always-run cleanup removes the isolated Composer home before PHPUnit and PHPCS run. Only downloaded archives are cached; Composer home/auth files are not cached. Fork pull requests skip this private-dependency job instead of receiving credentials. Ordinary same-repository PR workflow changes still require trusted review; step scoping does not make an arbitrary workflow from an untrusted author safe.
